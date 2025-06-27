@@ -208,20 +208,23 @@
 
 @section Scripts {
     <script>
+        // グローバル変数として宣言
+        let video, canvas, capturedImage, capturedImg, startCameraBtn, captureBtn, retakeBtn, stopCameraBtn, testImageInput, filePreview, previewImg;
+        let currentStream = null;
+
         document.addEventListener('DOMContentLoaded', function() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const capturedImage = document.getElementById('capturedImage');
-            const capturedImg = document.getElementById('capturedImg');
-            const startCameraBtn = document.getElementById('startCamera');
-            const captureBtn = document.getElementById('captureBtn');
-            const retakeBtn = document.getElementById('retakeBtn');
-            const stopCameraBtn = document.getElementById('stopCamera');
-            const testImageInput = document.getElementById('testImageInput');
-            const filePreview = document.getElementById('filePreview');
-            const previewImg = document.getElementById('previewImg');
-            
-            let currentStream = null;
+            // DOM要素を取得
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            capturedImage = document.getElementById('capturedImage');
+            capturedImg = document.getElementById('capturedImg');
+            startCameraBtn = document.getElementById('startCamera');
+            captureBtn = document.getElementById('captureBtn');
+            retakeBtn = document.getElementById('retakeBtn');
+            stopCameraBtn = document.getElementById('stopCamera');
+            testImageInput = document.getElementById('testImageInput');
+            filePreview = document.getElementById('filePreview');
+            previewImg = document.getElementById('previewImg');
 
             // カメラ開始
             startCameraBtn.addEventListener('click', async function() {
@@ -300,37 +303,46 @@
 
             // ページリロード時にカメラを停止
             window.addEventListener('beforeunload', function() {
-                stopCamera();
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
             });
         });
 
         // テストリセット関数
         function resetTest() {
             // カメラを停止
-            stopCamera();
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
             
-            // フォームをリセット
-            document.getElementById('testForm').reset();
-            
-            // プレビューをクリア
-            const preview = document.getElementById('uploadPreview');
-            preview.innerHTML = '';
-            preview.style.display = 'none';
-            
-            // カメラセクションを表示
-            document.getElementById('cameraSection').style.display = 'block';
-            document.getElementById('uploadSection').style.display = 'block';
+            // ビデオとキャンバス要素をリセット
+            if (video) video.style.display = 'none';
+            if (capturedImage) capturedImage.style.display = 'none';
+            if (filePreview) filePreview.style.display = 'none';
             
             // ボタン状態をリセット
-            document.getElementById('startCameraBtn').disabled = false;
-            document.getElementById('captureBtn').style.display = 'none';
-            document.getElementById('retakeBtn').style.display = 'none';
-            document.getElementById('stopCameraBtn').style.display = 'none';
+            if (startCameraBtn) startCameraBtn.style.display = 'inline-block';
+            if (captureBtn) captureBtn.style.display = 'none';
+            if (retakeBtn) retakeBtn.style.display = 'none';
+            if (stopCameraBtn) stopCameraBtn.style.display = 'none';
             
-            // 結果をスクロールで非表示に
-            const testResults = document.querySelector('.card.mt-4');
-            if (testResults && testResults.querySelector('.card-header.bg-success')) {
-                testResults.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            // フォームをリセット
+            const testForm = document.getElementById('testForm');
+            if (testForm) testForm.reset();
+            if (testImageInput) testImageInput.value = '';
+            
+            // ページを上部にスクロール（テスト結果を隠す）
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // テスト結果セクションを非表示にする（オプション）
+            const resultSection = document.querySelector('.card.mt-4');
+            if (resultSection && resultSection.querySelector('.card-header.bg-success')) {
+                // 結果セクションを非表示にする代わりに、フォームセクションにフォーカスを移動
+                const testForm = document.getElementById('testForm');
+                if (testForm) testForm.scrollIntoView({ behavior: 'smooth' });
             }
         }
     </script>
