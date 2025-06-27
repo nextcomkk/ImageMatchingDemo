@@ -1,0 +1,337 @@
+@model ImageCompare.Models.Question
+
+@{
+    ViewData["Title"] = "画像照合テスト";
+    var testResult = ViewBag.TestResult as ImageCompare.Models.TestResult;
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-camera"></i> 画像照合テスト
+                    </h3>
+                    <p class="mb-0 mt-2">問題：<strong>@Model.Name</strong></p>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (ViewBag.TestResult != null)
+                    {
+                        var result = ViewBag.TestResult as ImageCompare.Models.TestResult;
+                        var detailedPredictions = ViewBag.DetailedPredictions as List<(double confidence, string tagName)>;
+                        var testImagePath = ViewBag.TestImagePath as string;
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-line"></i> 画像比較結果</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- 一致率表示 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <h6>総合一致率</h6>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                                <div class="progress-bar @(result.MatchScore >= 0.8 ? "bg-success" : result.MatchScore >= 0.5 ? "bg-warning" : "bg-danger")" 
+                                                     role="progressbar" 
+                                                     style="width: @((result.MatchScore * 100).ToString("F1"))%">
+                                                    @result.MatchScore.ToString("P2")
+                                                </div>
+                                            </div>
+                                            @if (result.MatchScore >= 0.8)
+                                            {
+                                                <span class="badge bg-success">高い一致</span>
+                                            }
+                                            else if (result.MatchScore >= 0.5)
+                                            {
+                                                <span class="badge bg-warning">中程度の一致</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">低い一致</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- テスト画像表示 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-camera"></i> テスト画像</h6>
+                                            </div>
+                                            <div class="card-body text-center">
+                                                @if (!string.IsNullOrEmpty(testImagePath))
+                                                {
+                                                    <img src="@testImagePath" alt="テスト画像" class="img-fluid rounded" style="max-height: 300px;">
+                                                }
+                                                <p class="mt-2 mb-0 text-muted">@result.TestImageFileName</p>
+                                                <small class="text-muted">テスト日時: @result.TestedAt.ToString("yyyy/MM/dd HH:mm")</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 詳細予測結果 -->
+                                @if (detailedPredictions != null && detailedPredictions.Any())
+                                {
+                                    <div class="mt-4">
+                                        <h6><i class="fas fa-list"></i> 詳細予測結果</h6>
+                                        <div class="row">
+                                            @foreach (var prediction in detailedPredictions.Take(5))
+                                            {
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-truncate me-2">@prediction.tagName</span>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="progress me-2" style="width: 100px; height: 20px;">
+                                                                <div class="progress-bar bg-info" 
+                                                                     role="progressbar" 
+                                                                     style="width: @((prediction.confidence * 100).ToString("F1"))%">
+                                                                </div>
+                                                            </div>
+                                                            <small class="text-muted">@prediction.confidence.ToString("P1")</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- アクションボタン -->
+                                <div class="text-center mt-4">
+                                    <button type="button" class="btn btn-primary" onclick="resetTest()">
+                                        <i class="fas fa-redo"></i> 別の画像でテスト
+                                    </button>
+                                    <a asp-action="TestResults" asp-route-id="@Model.Id" class="btn btn-info">
+                                        <i class="fas fa-history"></i> テスト履歴
+                                    </a>
+                                    <a asp-action="Index" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> 問題一覧に戻る
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> 使用方法</h5>
+                        <ol class="mb-0">
+                            <li>カメラで撮影するか、端末から画像を選択してください</li>
+                            <li>「照合テストを実行」ボタンをクリックしてください</li>
+                            <li>Azure Custom Visionが学習済みモデルと照合して一致率を表示します</li>
+                        </ol>
+                    </div>
+
+                    <!-- カメラ撮影セクション -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-camera"></i> カメラで撮影</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <video id="video" width="100%" height="300" style="display: none; max-width: 500px;" autoplay></video>
+                                <canvas id="canvas" style="display: none;"></canvas>
+                                <div id="capturedImage" style="display: none;">
+                                    <img id="capturedImg" src="" alt="撮影画像" style="max-width: 100%; height: auto;">
+                                </div>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button id="startCamera" class="btn btn-primary">
+                                    <i class="fas fa-video"></i> カメラを開始
+                                </button>
+                                <button id="captureBtn" class="btn btn-success" style="display: none;">
+                                    <i class="fas fa-camera"></i> 撮影
+                                </button>
+                                <button id="retakeBtn" class="btn btn-warning" style="display: none;">
+                                    <i class="fas fa-redo"></i> 撮り直し
+                                </button>
+                                <button id="stopCamera" class="btn btn-danger" style="display: none;">
+                                    <i class="fas fa-stop"></i> カメラを停止
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ファイルアップロードセクション -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-upload"></i> または画像ファイルを選択</h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="Test" method="post" enctype="multipart/form-data" id="testForm">
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                                <div class="mb-3">
+                                    <input type="file" name="testImage" id="testImageInput" class="form-control" accept="image/*">
+                                </div>
+
+                                <div id="filePreview" style="display: none;" class="text-center mb-3">
+                                    <img id="previewImg" src="" alt="プレビュー" style="max-width: 100%; max-height: 300px;">
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a asp-action="Index" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> 問題一覧に戻る
+                                    </a>
+                                    <button type="submit" class="btn btn-success btn-lg" id="submitTestBtn">
+                                        <i class="fas fa-search"></i> 照合テストを実行
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const capturedImage = document.getElementById('capturedImage');
+            const capturedImg = document.getElementById('capturedImg');
+            const startCameraBtn = document.getElementById('startCamera');
+            const captureBtn = document.getElementById('captureBtn');
+            const retakeBtn = document.getElementById('retakeBtn');
+            const stopCameraBtn = document.getElementById('stopCamera');
+            const testImageInput = document.getElementById('testImageInput');
+            const filePreview = document.getElementById('filePreview');
+            const previewImg = document.getElementById('previewImg');
+            
+            let currentStream = null;
+
+            // カメラ開始
+            startCameraBtn.addEventListener('click', async function() {
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = currentStream;
+                    video.style.display = 'block';
+                    startCameraBtn.style.display = 'none';
+                    captureBtn.style.display = 'inline-block';
+                    stopCameraBtn.style.display = 'inline-block';
+                } catch (err) {
+                    alert('カメラの起動に失敗しました: ' + err.message);
+                }
+            });
+
+            // 撮影
+            captureBtn.addEventListener('click', function() {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0);
+                
+                // 撮影した画像を表示
+                capturedImg.src = canvas.toDataURL('image/jpeg');
+                capturedImage.style.display = 'block';
+                video.style.display = 'none';
+                captureBtn.style.display = 'none';
+                retakeBtn.style.display = 'inline-block';
+                
+                // 撮影した画像をファイル入力に設定
+                canvas.toBlob(function(blob) {
+                    const file = new File([blob], 'captured_image.jpg', { type: 'image/jpeg' });
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    testImageInput.files = dt.files;
+                }, 'image/jpeg');
+            });
+
+            // 撮り直し
+            retakeBtn.addEventListener('click', function() {
+                capturedImage.style.display = 'none';
+                video.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+                retakeBtn.style.display = 'none';
+                testImageInput.value = '';
+            });
+
+            // カメラ停止
+            stopCameraBtn.addEventListener('click', function() {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+                video.style.display = 'none';
+                capturedImage.style.display = 'none';
+                startCameraBtn.style.display = 'inline-block';
+                captureBtn.style.display = 'none';
+                retakeBtn.style.display = 'none';
+                stopCameraBtn.style.display = 'none';
+            });
+
+            // ファイル選択時のプレビュー
+            testImageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        filePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    filePreview.style.display = 'none';
+                }
+            });
+
+            // ページリロード時にカメラを停止
+            window.addEventListener('beforeunload', function() {
+                stopCamera();
+            });
+        });
+
+        // テストリセット関数
+        function resetTest() {
+            // カメラを停止
+            stopCamera();
+            
+            // フォームをリセット
+            document.getElementById('testForm').reset();
+            
+            // プレビューをクリア
+            const preview = document.getElementById('uploadPreview');
+            preview.innerHTML = '';
+            preview.style.display = 'none';
+            
+            // カメラセクションを表示
+            document.getElementById('cameraSection').style.display = 'block';
+            document.getElementById('uploadSection').style.display = 'block';
+            
+            // ボタン状態をリセット
+            document.getElementById('startCameraBtn').disabled = false;
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('stopCameraBtn').style.display = 'none';
+            
+            // 結果をスクロールで非表示に
+            const testResults = document.querySelector('.card.mt-4');
+            if (testResults && testResults.querySelector('.card-header.bg-success')) {
+                testResults.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }
+    </script>
+} 

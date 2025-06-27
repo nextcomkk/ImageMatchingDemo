@@ -1,0 +1,220 @@
+@model ImageCompare.Models.Question
+
+@{
+    ViewData["Title"] = "テスト結果履歴";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-history"></i> テスト結果履歴
+                    </h3>
+                    <p class="mb-0 mt-2">問題：<strong>@Model.Name</strong></p>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (Model.TestResults.Any())
+                    {
+                        <!-- 統計情報 -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-primary">@Model.TestResults.Count</h4>
+                                        <p class="text-muted mb-0">総テスト数</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-success">@Model.TestResults.Count(r => r.MatchScore >= 0.8)</h4>
+                                        <p class="text-muted mb-0">高一致 (80%+)</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-warning">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-warning">@Model.TestResults.Count(r => r.MatchScore >= 0.5 && r.MatchScore < 0.8)</h4>
+                                        <p class="text-muted mb-0">中一致 (50-79%)</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-danger">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-danger">@Model.TestResults.Count(r => r.MatchScore < 0.5)</h4>
+                                        <p class="text-muted mb-0">低一致 (50%未満)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 平均一致率 -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5><i class="fas fa-chart-bar"></i> 平均一致率</h5>
+                                @{
+                                    var averageScore = Model.TestResults.Average(r => r.MatchScore);
+                                }
+                                <div class="progress mb-2" style="height: 30px;">
+                                    <div class="progress-bar @(averageScore >= 0.8 ? "bg-success" : averageScore >= 0.5 ? "bg-warning" : "bg-danger")" 
+                                         role="progressbar" 
+                                         style="width: @((averageScore * 100).ToString("F1"))%">
+                                        @averageScore.ToString("P2")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- テスト結果一覧 -->
+                        <h5><i class="fas fa-list"></i> テスト履歴</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>テスト日時</th>
+                                        <th>ファイル名</th>
+                                        <th>一致率</th>
+                                        <th>予測結果</th>
+                                        <th>評価</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in Model.TestResults.OrderByDescending(r => r.TestedAt))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <small>@result.TestedAt.ToString("yyyy/MM/dd HH:mm:ss")</small>
+                                            </td>
+                                            <td>
+                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                                      title="@result.TestImageFileName">
+                                                    @result.TestImageFileName
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress me-2" style="width: 80px; height: 20px;">
+                                                        <div class="progress-bar @(result.MatchScore >= 0.8 ? "bg-success" : result.MatchScore >= 0.5 ? "bg-warning" : "bg-danger")" 
+                                                             role="progressbar" 
+                                                             style="width: @((result.MatchScore * 100).ToString("F1"))%">
+                                                        </div>
+                                                    </div>
+                                                    <small>@result.MatchScore.ToString("P1")</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@result.PredictionResult</small>
+                                            </td>
+                                            <td>
+                                                @if (result.MatchScore >= 0.8)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check"></i> 高一致
+                                                    </span>
+                                                }
+                                                else if (result.MatchScore >= 0.5)
+                                                {
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-exclamation"></i> 中一致
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times"></i> 低一致
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (System.IO.File.Exists(result.TestImageFilePath))
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                            onclick="showImageModal('@result.TestImageFileName', '/uploads/test/@Model.Id/@(System.IO.Path.GetFileName(result.TestImageFilePath))')">
+                                                        <i class="fas fa-eye"></i> 表示
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-5x text-muted mb-3"></i>
+                            <h5 class="text-muted">テスト結果がありません</h5>
+                            <p class="text-muted">まず画像照合テストを実行してください。</p>
+                            <a asp-action="Test" asp-route-id="@Model.Id" class="btn btn-primary">
+                                <i class="fas fa-camera"></i> テストを開始
+                            </a>
+                        </div>
+                    }
+
+                    <!-- ナビゲーションボタン -->
+                    <div class="text-center mt-4">
+                        <a asp-action="Test" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-camera"></i> 新しいテスト
+                        </a>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                            <i class="fas fa-info-circle"></i> 問題詳細
+                        </a>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> 問題一覧に戻る
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 画像表示モーダル -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">テスト画像</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="テスト画像" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showImageModal(fileName, imagePath) {
+            document.getElementById('imageModalLabel').textContent = fileName;
+            document.getElementById('modalImage').src = imagePath;
+            
+            var modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        }
+    </script>
+} 

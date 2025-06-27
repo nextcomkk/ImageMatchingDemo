@@ -1,0 +1,199 @@
+@model ImageCompare.Models.Question
+
+@{
+    ViewData["Title"] = "質問詳細";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Name</h5>
+        <p class="card-text">@Model.Description</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <strong>作成日:</strong> @Model.CreatedAt.ToString("yyyy/MM/dd HH:mm")
+            </div>
+            <div class="col-md-6">
+                <strong>Custom Vision プロジェクト ID:</strong> 
+                @if (string.IsNullOrEmpty(Model.CustomVisionProjectId))
+                {
+                    <span class="text-muted">未作成</span>
+                }
+                else
+                {
+                    <span class="text-success">@Model.CustomVisionProjectId</span>
+                }
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <strong>タグ数:</strong> @Model.QuestionTags.Count
+            </div>
+            <div class="col-md-6">
+                <strong>総学習画像数:</strong> @Model.QuestionTags.Sum(qt => qt.TrainingImages.Count)
+            </div>
+        </div>
+
+        @if (Model.QuestionTags.Any())
+        {
+            <div class="mt-3">
+                <h6>タグ別画像数:</h6>
+                <ul class="list-group">
+                    @foreach (var tag in Model.QuestionTags)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>@tag.TagName</strong>
+                                @if (!string.IsNullOrEmpty(tag.Description))
+                                {
+                                    <br><small class="text-muted">@tag.Description</small>
+                                }
+                            </div>
+                            <span class="badge bg-primary rounded-pill">@tag.TrainingImages.Count 枚</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="mt-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <a asp-action="ManageTags" asp-route-id="@Model.Id" class="btn btn-primary w-100">
+                        <i class="fas fa-tags"></i> タグ管理
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-action="TrainModel" asp-route-id="@Model.Id" class="btn btn-success w-100">
+                        <i class="fas fa-brain"></i> モデル学習
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-action="CompareImage" asp-route-id="@Model.Id" class="btn btn-info w-100">
+                        <i class="fas fa-search"></i> 画像比較
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning w-100">
+                        <i class="fas fa-edit"></i> 編集
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 質問一覧に戻る
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (Model.QuestionTags.Any())
+{
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>トレーニング要件</h5>
+            </div>
+            <div class="card-body">
+                @{
+                    var totalImages = Model.QuestionTags.Sum(qt => qt.TrainingImages.Count);
+                    var tagCount = Model.QuestionTags.Count;
+                    var minImagesPerTag = Model.QuestionTags.Any() ? Model.QuestionTags.Min(qt => qt.TrainingImages.Count) : 0;
+                }
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6>タグ数</h6>
+                            <span class="badge @(tagCount >= 2 ? "bg-success" : "bg-danger") fs-5">@tagCount / 2</span>
+                            <p class="small mt-1">最低2つのタグが必要</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6>総画像数</h6>
+                            <span class="badge @(totalImages >= 10 ? "bg-success" : "bg-danger") fs-5">@totalImages / 10</span>
+                            <p class="small mt-1">最低10枚の画像が必要</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6>最少タグ画像数</h6>
+                            <span class="badge @(minImagesPerTag >= 5 ? "bg-success" : "bg-danger") fs-5">@minImagesPerTag / 5</span>
+                            <p class="small mt-1">各タグ最低5枚必要</p>
+                        </div>
+                    </div>
+                </div>
+
+                @if (tagCount >= 2 && totalImages >= 10 && minImagesPerTag >= 5)
+                {
+                    <div class="alert alert-success text-center mt-3">
+                        <i class="fas fa-check-circle"></i> トレーニング準備完了！
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning text-center mt-3">
+                        <i class="fas fa-exclamation-triangle"></i> トレーニング要件を満たしていません。タグ管理から画像を追加してください。
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- 画像表示モーダル -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">学習画像</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="学習画像" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showImageModal(fileName, imagePath) {
+            document.getElementById('imageModalLabel').textContent = fileName;
+            document.getElementById('modalImage').src = imagePath;
+            
+            var modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        }
+    </script>
+} 

@@ -1,0 +1,258 @@
+@model ImageCompare.Models.ManageTagsViewModel
+@{
+    ViewData["Title"] = "タグ管理";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-tags me-2"></i>タグ管理: @Model.Question.Name
+                    </h3>
+                    <div class="card-tools">
+                        <a href="@Url.Action("Details", new { id = Model.Question.Id })" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>戻る
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Add New Tag Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>新しいタグを追加</h5>
+                            <form asp-action="AddTag" method="post" class="row g-3">
+                                <input type="hidden" name="id" value="@Model.Question.Id" />
+                                <div class="col-md-6">
+                                    <label for="tagName" class="form-label">タグ名</label>
+                                    <input type="text" class="form-control" id="tagName" name="tagName" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="tagDescription" class="form-label">説明（オプション）</label>
+                                    <input type="text" class="form-control" id="tagDescription" name="tagDescription">
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">タグを追加</button>
+                                    <form asp-action="SyncWithAzure" method="post" class="d-inline">
+                                        <input type="hidden" name="questionId" value="@Model.Question.Id" />
+                                        <button type="submit" class="btn btn-info ms-2" title="Azure Custom Vision との同期状態を確認">
+                                            <i class="fas fa-sync-alt"></i> Azure同期確認
+                                        </button>
+                                    </form>
+                                    <a href="@Url.Action("ManageTags", new { id = Model.Question.Id })" class="btn btn-outline-secondary ms-2" title="Azure タグ一覧を更新">
+                                        <i class="fas fa-refresh"></i> 更新
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Existing Tags -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>既存のタグ</h5>
+                            @if (Model.Question.QuestionTags.Any())
+                            {
+                                <div class="row">
+                                    @foreach (var tag in Model.Question.QuestionTags)
+                                    {
+                                        <div class="col-md-6 col-lg-4 mb-4">
+                                            <div class="card">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">
+                                                        <i class="fas fa-tag me-1"></i>@tag.TagName
+                                                        <small class="text-success ms-1"><i class="fas fa-database" title="データベースに存在"></i></small>
+                                                    </h6>
+                                                    <span class="badge bg-primary rounded-pill">@tag.TrainingImages.Count 枚</span>
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (!string.IsNullOrEmpty(tag.Description))
+                                                    {
+                                                        <p class="card-text text-muted small">@tag.Description</p>
+                                                    }
+                                                    
+                                                    <!-- Upload Images to This Tag -->
+                                                    <form asp-action="UploadTagImages" method="post" enctype="multipart/form-data" class="mb-2">
+                                                        <input type="hidden" name="questionId" value="@Model.Question.Id" />
+                                                        <input type="hidden" name="tagId" value="@tag.Id" />
+                                                        <div class="mb-2">
+                                                            <input type="file" class="form-control form-control-sm" name="images" multiple accept="image/*" required>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-success btn-sm w-100">
+                                                            <i class="fas fa-upload me-1"></i>画像をアップロード
+                                                        </button>
+                                                    </form>
+
+                                                    <!-- View Images -->
+                                                    @if (tag.TrainingImages.Any())
+                                                    {
+                                                        <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#imagesModal_@tag.Id">
+                                                            <i class="fas fa-images me-1"></i>画像を表示
+                                                        </button>
+                                                    }
+
+                                                    <!-- Delete Tag -->
+                                                    <form asp-action="DeleteTag" method="post" class="mt-2" onsubmit="return confirm('このタグと関連する画像を削除しますか？')">
+                                                        <input type="hidden" name="questionId" value="@Model.Question.Id" />
+                                                        <input type="hidden" name="tagId" value="@tag.Id" />
+                                                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                                                            <i class="fas fa-trash me-1"></i>タグを削除
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Images Modal -->
+                                        <div class="modal fade" id="imagesModal_@tag.Id" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">@tag.TagName の画像</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row">
+                                                            @foreach (var image in tag.TrainingImages)
+                                                            {
+                                                                <div class="col-md-4 mb-3">
+                                                                    <div class="card">
+                                                                        <img src="@Url.Content("~/uploads/training/" + Model.Question.Id + "/" + image.FileName)" 
+                                                                             class="card-img-top" alt="@image.FileName" style="height: 150px; object-fit: cover;">
+                                                                        <div class="card-body p-2">
+                                                                            <small class="text-muted">@image.FileName</small>
+                                                                            <form asp-action="DeleteTrainingImage" method="post" class="mt-1">
+                                                                                <input type="hidden" name="imageId" value="@image.Id" />
+                                                                                <input type="hidden" name="questionId" value="@Model.Question.Id" />
+                                                                                <button type="submit" class="btn btn-danger btn-sm w-100" 
+                                                                                        onclick="return confirm('この画像を削除しますか？')">
+                                                                                    <i class="fas fa-trash"></i>
+                                                                                </button>
+                                                                            </form>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    まだタグが作成されていません。上のフォームから新しいタグを追加してください。
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Azure Custom Vision Tags -->
+                    @if (Model.AzureTags.Any())
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>
+                                    <i class="fas fa-cloud me-2 text-info"></i>Azure Custom Vision のタグ
+                                    <small class="text-muted">(@Model.AzureTags.Count 個)</small>
+                                </h5>
+                                <div class="row">
+                                    @foreach (var azureTag in Model.AzureTags)
+                                    {
+                                        <div class="col-md-6 col-lg-4 mb-4">
+                                            <div class="card @(azureTag.ExistsInDatabase ? "border-success" : "border-warning")">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">
+                                                        <i class="fas fa-cloud me-1 text-info"></i>@azureTag.Name
+                                                        @if (azureTag.ExistsInDatabase)
+                                                        {
+                                                            <small class="text-success ms-1"><i class="fas fa-check-circle" title="データベースにも存在"></i></small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <small class="text-warning ms-1"><i class="fas fa-exclamation-triangle" title="Azureのみに存在"></i></small>
+                                                        }
+                                                    </h6>
+                                                    <span class="badge @(azureTag.ExistsInDatabase ? "bg-success" : "bg-warning") rounded-pill">@azureTag.ImageCount 枚</span>
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (!azureTag.ExistsInDatabase)
+                                                    {
+                                                        <div class="alert alert-warning alert-sm p-2 mb-2">
+                                                            <small><i class="fas fa-info-circle me-1"></i>このタグはAzureにのみ存在します</small>
+                                                        </div>
+                                                    }
+                                                    
+                                                    <div class="d-grid gap-2">
+                                                        <!-- Delete from Azure -->
+                                                        <form asp-action="DeleteAzureTag" method="post" onsubmit="return confirm('Azure Custom Vision からタグ「@azureTag.Name」とその画像をすべて削除しますか？')">
+                                                            <input type="hidden" name="questionId" value="@Model.Question.Id" />
+                                                            <input type="hidden" name="tagName" value="@azureTag.Name" />
+                                                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                                <i class="fas fa-trash me-1"></i>Azureから削除
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (Model.HasAzureProject)
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-cloud me-2"></i>Azure Custom Vision のタグ</h6>
+                                    <p class="mb-0">Azure Custom Vision にタグが見つかりませんでした。画像をアップロードするとタグが作成されます。</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Training Requirements Info -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle me-2"></i>学習要件</h6>
+                                <ul class="mb-0">
+                                    <li>最低2つのタグが必要です</li>
+                                    <li>各タグに最低5枚の画像が必要です</li>
+                                    <li>全体で最低10枚の画像が必要です</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-submit forms when files are selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        // Show loading state
+                        const submitBtn = this.closest('form').querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>アップロード中...';
+                        submitBtn.disabled = true;
+                    }
+                });
+            });
+        });
+    </script>
+} 

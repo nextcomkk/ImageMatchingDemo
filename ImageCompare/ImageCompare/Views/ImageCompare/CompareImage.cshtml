@@ -1,0 +1,206 @@
+@{
+    ViewData["Title"] = "画像比較";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-search me-2"></i>画像比較
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Warning"] != null)
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @TempData["Warning"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Info"] != null)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            @TempData["Info"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <!-- デバッグセクション -->
+                    <div class="alert alert-secondary" role="alert">
+                        <h6><i class="fas fa-bug me-2"></i>デバッグ機能</h6>
+                        <p class="mb-2">問題が発生している場合は、以下のテストを実行してください：</p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="testCustomVision()">
+                                <i class="fas fa-cloud me-1"></i>Custom Vision接続テスト
+                            </button>
+                            <span id="customVisionStatus" class="align-self-center"></span>
+                        </div>
+                    </div>
+
+                    <form asp-action="CompareImagePost" method="post" enctype="multipart/form-data" id="compareForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="imageFile" class="form-label">比較する画像を選択</label>
+                                    <input type="file" class="form-control" id="imageFile" name="imageFile" accept="image/*" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="questionId" class="form-label">比較対象の問題</label>
+                                    <select class="form-select" id="questionId" name="questionId" required>
+                                        <option value="">問題を選択してください</option>
+                                        @if (ViewBag.Questions != null)
+                                        {
+                                            @foreach (var question in (List<ImageCompare.Models.Question>)ViewBag.Questions)
+                                            {
+                                                var hasModel = !string.IsNullOrEmpty(question.CustomVisionModelName);
+                                                var statusText = hasModel ? "学習済み" : "学習中/未学習";
+                                                <option value="@question.Id">
+                                                    @question.Name (@(question.TrainingImages.Count)枚) - @statusText
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" id="aiCompareBtn" formaction="@Url.Action("CompareImagePost")">
+                                        <i class="fas fa-robot me-1"></i>AI比較実行
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- 利用可能な問題の状況 -->
+                    @if (ViewBag.AllQuestions != null)
+                    {
+                        var allQuestions = (List<ImageCompare.Models.Question>)ViewBag.AllQuestions;
+                        if (allQuestions.Any())
+                        {
+                            <div class="mt-4">
+                                <h5>問題の状況</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>問題名</th>
+                                                <th>学習画像数</th>
+                                                <th>プロジェクト</th>
+                                                <th>モデル</th>
+                                                <th>状態</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var q in allQuestions)
+                                            {
+                                                <tr>
+                                                    <td>@q.Name</td>
+                                                    <td>@q.TrainingImages.Count</td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(q.CustomVisionProjectId))
+                                                        {
+                                                            <span class="badge bg-success">あり</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger">なし</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(q.CustomVisionModelName))
+                                                        {
+                                                            <span class="badge bg-success">学習済み</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning">未学習</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(q.CustomVisionModelName))
+                                                        {
+                                                            <span class="text-success">AI比較可能</span>
+                                                        }
+                                                        else if (q.TrainingImages.Any())
+                                                        {
+                                                            <span class="text-warning">基本比較のみ</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-danger">比較不可</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // フォーム送信時の処理
+    document.getElementById('aiCompareBtn').addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>AI比較中...';
+        this.disabled = true;
+    });
+    
+    document.getElementById('basicCompareBtn').addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>基本比較中...';
+        this.disabled = true;
+    });
+
+    // Custom Vision接続テスト
+    function testCustomVision() {
+        const statusSpan = document.getElementById('customVisionStatus');
+        statusSpan.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> テスト中...';
+        
+        fetch('@Url.Action("TestCustomVisionService")')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusSpan.innerHTML = `<span class="badge bg-success">接続OK</span> プロジェクト数: ${data.projectCount}`;
+                } else {
+                    statusSpan.innerHTML = `<span class="badge bg-danger">接続エラー</span> ${data.message}`;
+                }
+            })
+            .catch(error => {
+                statusSpan.innerHTML = `<span class="badge bg-danger">接続エラー</span> ${error.message}`;
+            });
+    }
+</script> 

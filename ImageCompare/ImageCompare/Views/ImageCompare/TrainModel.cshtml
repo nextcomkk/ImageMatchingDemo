@@ -1,0 +1,207 @@
+@model ImageCompare.Models.Question
+
+@{
+    ViewData["Title"] = "モデル学習";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-brain"></i> モデル学習
+                    </h3>
+                    <p class="mb-0 mt-2">問題：<strong>@Model.Name</strong></p>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> 学習について</h5>
+                        <ul class="mb-0">
+                            <li>アップロードされた画像を使用してAzure Custom Visionでモデルを学習します</li>
+                            <li>学習には数分かかる場合があります</li>
+                            <li>学習完了後、画像照合テストが可能になります</li>
+                            <li>より多くの画像で学習するほど、精度が向上します</li>
+                        </ul>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-images"></i> 学習データ</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center">
+                                        <div class="display-4 text-primary mb-2">@Model.TrainingImages.Count</div>
+                                        <p class="text-muted">アップロード済み画像</p>
+                                    </div>
+                                    
+                                    @if (Model.TrainingImages.Count < 5)
+                                    {
+                                        <div class="alert alert-warning alert-sm">
+                                            <small>
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                推奨：5枚以上の画像で学習することをお勧めします
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> 学習状況</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center">
+                                        @if (string.IsNullOrEmpty(Model.CustomVisionModelName))
+                                        {
+                                            <div class="text-warning">
+                                                <i class="fas fa-clock fa-3x mb-2"></i>
+                                                <p class="mb-0">未学習</p>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-success">
+                                                <i class="fas fa-check-circle fa-3x mb-2"></i>
+                                                <p class="mb-0">学習済み</p>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.TrainingImages.Any())
+                    {
+                        <div class="mt-4">
+                            <h5><i class="fas fa-images"></i> アップロード済み画像</h5>
+                            <div class="row">
+                                @foreach (var image in Model.TrainingImages.Take(8))
+                                {
+                                    <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-body p-2 text-center">
+                                                <i class="fas fa-image fa-2x text-muted"></i>
+                                                <small class="d-block mt-1 text-truncate">@image.FileName</small>
+                                                <small class="text-muted">@image.UploadedAt.ToString("MM/dd HH:mm")</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (Model.TrainingImages.Count > 8)
+                                {
+                                    <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                        <div class="card border-secondary">
+                                            <div class="card-body p-2 text-center text-muted">
+                                                <i class="fas fa-plus-circle fa-2x"></i>
+                                                <small class="d-block mt-1">他 @(Model.TrainingImages.Count - 8) 枚</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <form asp-action="TrainModelPost" method="post" id="trainForm">
+                                <input type="hidden" asp-for="@Model.Id" />
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a asp-action="UploadTrainingImages" asp-route-id="@Model.Id" class="btn btn-info">
+                                            <i class="fas fa-plus"></i> 画像を追加
+                                        </a>
+                                        <a asp-action="Index" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> 問題一覧に戻る
+                                        </a>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-warning btn-lg" id="trainBtn">
+                                        <i class="fas fa-brain"></i> モデル学習を開始
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 学習中のプログレス表示 -->
+                        <div id="trainingProgress" style="display: none;" class="mt-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="spinner-border text-warning mb-3" role="status">
+                                        <span class="visually-hidden">学習中...</span>
+                                    </div>
+                                    <h5>モデルを学習中です...</h5>
+                                    <p class="text-muted">この処理には数分かかる場合があります。ページを閉じないでください。</p>
+                                    <div class="progress">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-images fa-5x text-muted mb-3"></i>
+                            <h5 class="text-muted">学習用画像がありません</h5>
+                            <p class="text-muted">まず学習用の画像をアップロードしてください。</p>
+                            <a asp-action="UploadTrainingImages" asp-route-id="@Model.Id" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> 画像をアップロード
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const trainForm = document.getElementById('trainForm');
+            const trainBtn = document.getElementById('trainBtn');
+            const trainingProgress = document.getElementById('trainingProgress');
+
+            if (trainForm) {
+                trainForm.addEventListener('submit', function(e) {
+                    // 学習開始時の確認
+                    if (!confirm('モデルの学習を開始しますか？この処理には時間がかかる場合があります。')) {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    // プログレス表示
+                    trainBtn.disabled = true;
+                    trainBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 学習中...';
+                    trainingProgress.style.display = 'block';
+                    
+                    // スクロールしてプログレスを表示
+                    trainingProgress.scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+        });
+    </script>
+} 

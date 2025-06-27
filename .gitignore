@@ -1,0 +1,15 @@
+.vs/
+
+/ImageCompare/ImageCompare/bin/Debug/
+/ImageCompare/ImageCompare/obj/
+/ImageCompare/ImageCompare/Migrations/
+/ImageCompare/ImageCompare/wwwroot/uploads/
+/ImageCompare/ImageCompare/wwwroot/downloads/
+/ImageCompare/ImageCompare/bin/
+/ImageCompare/.vs/
+/ImageCompare/ImageCompare/Properties/PublishProfiles/
+/ImageCompare/ImageCompare/appsettings.Development.json
+
+/node_modules/
+/.next/
+

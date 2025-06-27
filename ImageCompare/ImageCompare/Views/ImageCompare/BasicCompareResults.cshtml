@@ -1,0 +1,246 @@
+@{
+    ViewData["Title"] = "基本比較結果";
+    var basicMatches = ViewBag.BasicMatches as List<(string imagePath, double similarity, string reason)>;
+    var highMatches = ViewBag.HighMatches as List<(string imagePath, double similarity, string reason)>;
+    var question = ViewBag.Question as ImageCompare.Models.Question;
+}
+
+<div class="container mt-4">
+    @if (TempData["Info"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            @TempData["Info"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- 結果サマリー -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="fas fa-image me-2"></i>基本比較結果
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">@ViewBag.TotalMatches</h4>
+                                <small class="text-muted">85%以上マッチ</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">@Math.Round((double)ViewBag.HighestScore, 1)%</h4>
+                                <small class="text-muted">最高スコア</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">@Math.Round((double)ViewBag.AverageScore, 1)%</h4>
+                                <small class="text-muted">平均スコア</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">@question.TrainingImages.Count</h4>
+                                <small class="text-muted">比較画像数</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- アップロード画像 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>アップロード画像
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="@ViewBag.UploadedImagePath" alt="アップロード画像" 
+                         class="img-fluid rounded shadow" style="max-height: 400px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- 最適マッチ -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2"></i>ベストマッチ（基本比較）
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (basicMatches != null && basicMatches.Any())
+                    {
+                        var bestMatch = basicMatches.First();
+                        <div class="mb-3">
+                            <span class="badge bg-warning text-dark fs-6">
+                                @Math.Round(bestMatch.similarity, 1)% マッチ
+                            </span>
+                        </div>
+                        <img src="@bestMatch.imagePath" alt="ベストマッチ" 
+                             class="img-fluid rounded shadow mb-3" style="max-height: 350px;">
+                        <p class="text-muted">@System.IO.Path.GetFileName(bestMatch.imagePath)</p>
+                        <small class="text-muted">比較方法: @bestMatch.reason</small>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            適合する画像が見つかりませんでした。
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 85%以上のマッチング結果 -->
+    @if (highMatches != null && highMatches.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy me-2"></i>高精度マッチ (85%以上) - 基本比較
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var match in highMatches)
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-header text-center">
+                                            <span class="badge bg-success">
+                                                @Math.Round(match.similarity, 1)%
+                                            </span>
+                                        </div>
+                                        <div class="card-body text-center">
+                                            <img src="@match.imagePath" alt="マッチ画像" 
+                                                 class="img-fluid rounded mb-2" style="max-height: 200px;">
+                                            <p class="card-text text-muted small">
+                                                @System.IO.Path.GetFileName(match.imagePath)
+                                            </p>
+                                            <small class="text-muted">@match.reason</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>85%以上のマッチする画像が見つかりませんでした。</strong>
+                    <br>これは基本的な比較結果です。より正確な結果を得るには、AI比較（モデル学習）をご利用ください。
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- 全比較結果 -->
+    @if (basicMatches != null && basicMatches.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>全比較結果（基本比較）
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>画像ファイル</th>
+                                        <th>類似度</th>
+                                        <th>スコア</th>
+                                        <th>比較方法</th>
+                                        <th>評価</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var match in basicMatches)
+                                    {
+                                        var percentage = Math.Round(match.similarity, 1);
+                                        var badgeClass = percentage >= 85 ? "bg-success" : percentage >= 70 ? "bg-warning" : "bg-danger";
+                                        var evaluation = percentage >= 85 ? "高" : percentage >= 70 ? "中" : "低";
+                                        
+                                        <tr>
+                                            <td>@System.IO.Path.GetFileName(match.imagePath)</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar @badgeClass.Replace("bg-", "bg-")" 
+                                                         style="width: @percentage%">
+                                                        @percentage%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@percentage%</td>
+                                            <td>@match.reason</td>
+                                            <td>
+                                                <span class="badge @badgeClass">@evaluation</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- アクションボタン -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <a href="@Url.Action("CompareImage")" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-2"></i>新しい比較
+            </a>
+            <a href="@Url.Action("Details", new { id = question.Id })" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-info-circle me-2"></i>問題詳細
+            </a>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>問題一覧
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress {
+        background-color: #e9ecef;
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    .badge {
+        font-size: 0.9em;
+    }
+</style> 

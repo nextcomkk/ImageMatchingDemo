@@ -1,0 +1,214 @@
+@{
+    ViewData["Title"] = "比較結果";
+    var highMatchPredictions = ViewBag.HighMatchPredictions as List<(double confidence, string tagName)>;
+    var allPredictions = ViewBag.AllPredictions as List<(double confidence, string tagName)>;
+    var question = ViewBag.Question as ImageCompare.Models.Question;
+}
+
+<div class="container mt-4">
+    <!-- 結果サマリー -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>比較結果サマリー
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">@ViewBag.TotalMatches</h4>
+                                <small class="text-muted">85%以上マッチ</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">@Math.Round((double)ViewBag.HighestScore, 1)%</h4>
+                                <small class="text-muted">最高スコア</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">@Math.Round((double)ViewBag.AverageScore, 1)%</h4>
+                                <small class="text-muted">平均スコア</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">@question.TrainingImages.Count</h4>
+                                <small class="text-muted">学習画像数</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- アップロード画像 -->
+        <div class="col-lg-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>アップロード画像
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="@ViewBag.UploadedImagePath" alt="アップロード画像" 
+                         class="img-fluid rounded shadow" style="max-height: 400px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 85%以上のマッチング結果 -->
+    @if (highMatchPredictions != null && highMatchPredictions.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy me-2"></i>高精度マッチ (85%以上)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var prediction in highMatchPredictions)
+                            {
+                                var matchingImage = question.TrainingImages.FirstOrDefault(img => img.FileName.Contains(prediction.tagName));
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-header text-center">
+                                            <span class="badge bg-success">
+                                                @Math.Round(prediction.confidence * 100, 1)%
+                                            </span>
+                                        </div>
+                                        <div class="card-body text-center">
+                                            @if (matchingImage != null)
+                                            {
+                                                <img src="@matchingImage.FilePath" alt="@prediction.tagName" 
+                                                     class="img-fluid rounded mb-2" style="max-height: 200px;">
+                                                <h6 class="card-title">@prediction.tagName</h6>
+                                                <p class="card-text text-muted small">
+                                                    @System.IO.Path.GetFileName(matchingImage.FilePath)
+                                                </p>
+                                            }
+                                            else
+                                            {
+                                                <div class="text-center p-3">
+                                                    <i class="fas fa-image text-muted" style="font-size: 3rem;"></i>
+                                                    <h6 class="card-title mt-2">@prediction.tagName</h6>
+                                                    <p class="text-muted small">画像ファイルが見つかりません</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>85%以上のマッチする画像が見つかりませんでした。</strong>
+                    <br>より類似した画像をアップロードするか、学習データを追加してください。
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- 全予測結果 -->
+    @if (allPredictions != null && allPredictions.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>全予測結果
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>タグ名</th>
+                                        <th>信頼度</th>
+                                        <th>スコア</th>
+                                        <th>評価</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var prediction in allPredictions.OrderByDescending(p => p.confidence))
+                                    {
+                                        var percentage = Math.Round(prediction.confidence * 100, 1);
+                                        var badgeClass = percentage >= 85 ? "bg-success" : percentage >= 70 ? "bg-warning" : "bg-danger";
+                                        var evaluation = percentage >= 85 ? "高" : percentage >= 70 ? "中" : "低";
+                                        
+                                        <tr>
+                                            <td>@prediction.tagName</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar @badgeClass.Replace("bg-", "bg-")" 
+                                                         style="width: @percentage%">
+                                                        @percentage%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@percentage%</td>
+                                            <td>
+                                                <span class="badge @badgeClass">@evaluation</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- アクションボタン -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <a href="@Url.Action("CompareImage")" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-2"></i>新しい比較
+            </a>
+            <a href="@Url.Action("Details", new { id = question.Id })" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-info-circle me-2"></i>問題詳細
+            </a>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>問題一覧
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress {
+        background-color: #e9ecef;
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    .badge {
+        font-size: 0.9em;
+    }
+</style> 
