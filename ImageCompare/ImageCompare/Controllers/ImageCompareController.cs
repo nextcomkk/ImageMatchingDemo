@@ -42,6 +42,8 @@ namespace ImageCompare.Controllers
             var question = await _context.Questions
                 .Include(q => q.TrainingImages)
                 .Include(q => q.TestResults)
+                .Include(q => q.QuestionTags)
+                    .ThenInclude(qt => qt.TrainingImages)
                 .FirstOrDefaultAsync(q => q.Id == id);
 
             if (question == null)
@@ -67,131 +69,8 @@ namespace ImageCompare.Controllers
             {
                 _context.Questions.Add(question);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(UploadTrainingImages), new { id = question.Id });
+                return RedirectToAction(nameof(ManageTags), new { id = question.Id });
             }
-            return View(question);
-        }
-
-        // 学習用画像アップロード画面
-        public async Task<IActionResult> UploadTrainingImages(int id)
-        {
-            var question = await _context.Questions.FindAsync(id);
-            if (question == null)
-            {
-                return NotFound();
-            }
-
-            return View(question);
-        }
-
-        // 学習用画像アップロード処理
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UploadTrainingImages(int id, List<IFormFile> images)
-        {
-            var question = await _context.Questions
-                .Include(q => q.QuestionTags)
-                .FirstOrDefaultAsync(q => q.Id == id);
-
-            if (question == null)
-            {
-                return NotFound();
-            }
-
-            if (images == null || !images.Any())
-            {
-                ModelState.AddModelError("", "画像を選択してください。");
-                return View(question);
-            }
-
-            try
-            {
-                // Create upload directory
-                var uploadsDir = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "training", id.ToString());
-                Directory.CreateDirectory(uploadsDir);
-
-                // Ensure at least one tag exists - create default tag if none exist
-                QuestionTag defaultTag;
-                if (!question.QuestionTags.Any())
-                {
-                    defaultTag = new QuestionTag
-                    {
-                        QuestionId = id,
-                        TagName = question.Name, // Use question name as default tag
-                        Description = "デフォルトタグ - 自動作成"
-                    };
-                    _context.QuestionTags.Add(defaultTag);
-                    await _context.SaveChangesAsync(); // Save to get the ID
-                    
-                    _logger.LogInformation($"Created default tag '{defaultTag.TagName}' for question {id}");
-                }
-                else
-                {
-                    defaultTag = question.QuestionTags.First();
-                }
-
-                var uploadedPaths = new List<string>();
-
-                foreach (var image in images)
-                {
-                    if (image.Length > 0)
-                    {
-                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-                        var filePath = Path.Combine(uploadsDir, fileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await image.CopyToAsync(stream);
-                        }
-
-                        // Save to database with tag reference
-                        var trainingImage = new TrainingImage
-                        {
-                            QuestionId = id,
-                            QuestionTagId = defaultTag.Id, // Associate with default tag
-                            FileName = fileName,
-                            FilePath = filePath
-                        };
-
-                        _context.TrainingImages.Add(trainingImage);
-                        uploadedPaths.Add(filePath);
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-
-                // Create Custom Vision project if it doesn't exist
-                if (string.IsNullOrEmpty(question.CustomVisionProjectId))
-                {
-                    var project = await _customVisionService.CreateProjectAsync(question.Name);
-                    question.CustomVisionProjectId = project.Id.ToString();
-                    await _context.SaveChangesAsync();
-                }
-
-                // Upload to Custom Vision with the tag name
-                var projectId = Guid.Parse(question.CustomVisionProjectId);
-                var success = await _customVisionService.UploadTrainingImagesAsync(
-                    projectId,
-                    defaultTag.TagName, // Use the actual tag name
-                    uploadedPaths
-                );
-
-                if (success)
-                {
-                    TempData["Success"] = $"画像が '{defaultTag.TagName}' タグにアップロードされました。タグ管理から追加のタグを作成し、画像を分類してください。";
-                    return RedirectToAction(nameof(ManageTags), new { id });
-                }
-                else
-                {
-                    TempData["Error"] = "Custom Vision への画像アップロードに失敗しました。";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "画像アップロードエラー");
-                TempData["Error"] = "画像アップロード中にエラーが発生しました。";
-            }
-
             return View(question);
         }
 
