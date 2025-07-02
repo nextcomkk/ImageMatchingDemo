@@ -127,11 +127,12 @@ ImageCompare/
 │   └── CustomVisionService.cs       # Azure Custom Vision API
 ├── Views/
 │   └── ImageCompare/
-│       ├── Index.cshtml             # 問題一覧
-│       ├── Create.cshtml            # 問題作成
-│       ├── UploadTrainingImages.cshtml # 画像アップロード
-│       ├── TrainModel.cshtml        # モデル学習
-│       └── Test.cshtml              # 画像テスト
+│       ├── Details.cshtml          # 問題詳細
+│       ├── Index.cshtml            # 問題一覧
+│       ├── ManageTags.cshtml       # タグ管理
+│       ├── Test.cshtml             # テスト実行
+│       ├── TestResults.cshtml      # テスト結果
+│       └── TrainModel.cshtml       # モデル学習
 └── wwwroot/
     └── uploads/                     # アップロード画像保存先
 ```
