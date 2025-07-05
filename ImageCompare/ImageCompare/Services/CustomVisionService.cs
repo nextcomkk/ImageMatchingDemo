@@ -49,29 +49,55 @@ namespace ImageCompare.Services
         {
             try
             {
-                _logger.LogInformation($"Creating new project: {projectName}");
-                
-                // Get available domains and select classification domain (like console app)
-                var domains = await _trainingClient.GetDomainsAsync();
-                var classificationDomain = domains.FirstOrDefault(d => d.Type == "Classification");
-                
-                if (classificationDomain == null)
+                _logger.LogInformation($"Creating or reusing project: {projectName}");
+
+                // プロジェクト一覧を取得して重複チェック
+                var existingProjects = await _trainingClient.GetProjectsAsync();
+                var existingProject = existingProjects.FirstOrDefault(p => p.Name == projectName);
+
+                if (existingProject != null)
                 {
-                    _logger.LogWarning("No classification domain found, using default");
+                    _logger.LogInformation($"Project '{projectName}' already exists. Reusing existing project.");
+                    return existingProject;
                 }
 
+                // 使用可能なドメインを取得して分類用ドメインを選択
+                var domains = await _trainingClient.GetDomainsAsync();
+                var classificationDomain = domains.FirstOrDefault(d => d.Type == "Classification");
+
+                if (classificationDomain == null)
+                {
+                    _logger.LogWarning("No classification domain found. Using default settings.");
+                }
+
+                // 新規プロジェクト作成
                 var project = await _trainingClient.CreateProjectAsync(
-                    projectName, 
-                    description, 
-                    classificationDomain?.Id
+                    name: projectName,
+                    description: description,
+                    domainId: classificationDomain?.Id,
+                    classificationType: "Multiclass"
                 );
 
                 _logger.LogInformation($"Project created successfully: {project.Id}");
                 return project;
             }
+            catch (Microsoft.Azure.CognitiveServices.Vision.CustomVision.Training.Models.CustomVisionErrorException ex)
+            {
+                _logger.LogError("Custom Vision API Error:");
+                if (ex.Body != null)
+                {
+                    _logger.LogError("Code: {Code}", ex.Body.Code);
+                    _logger.LogError("Message: {Message}", ex.Body.Message);
+                }
+                else
+                {
+                    _logger.LogError("ex.Body is null.");
+                }
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating project");
+                _logger.LogError(ex, "Unexpected error occurred while creating project.");
                 throw;
             }
         }

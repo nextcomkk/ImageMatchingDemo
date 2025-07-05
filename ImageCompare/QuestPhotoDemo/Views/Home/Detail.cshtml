@@ -1,0 +1,455 @@
+﻿@model QuestPhotoDemo.Models.DetailViewModel
+@{
+    ViewData["Title"] = $"{Model.TagName} 詳細";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>@Model.TagName 管理</h1>
+                <a href="@Url.Action("Index")" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 戻る
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ViewBag.Error))
+            {
+                <div class="alert alert-danger">
+                    @ViewBag.Error
+                </div>
+            }
+
+            <!-- 画像アップロードエリア -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>画像をアップロード</h3>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">複数の画像をドラッグ&ドロップまたはクリックして選択</p>
+                            <input type="file" id="imageFiles" accept="image/*" multiple style="display: none;">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('imageFiles').click()">
+                                画像を選択
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作ボタンエリア -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-danger w-100" id="deleteSelectedBtn" disabled>
+                                <i class="fas fa-trash"></i> 選択した画像を削除
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                新しい画像を追加した後は、<a href="@Url.Action("Index")" class="text-primary">トップページ</a>でモデルを再学習してください
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画像一覧エリア -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>アップロード済み画像 (@Model.Images.Count 枚)</h3>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                            全選択
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn">
+                            選択解除
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="imageGallery">
+                        @if (Model.Images.Any())
+                        {
+                            @foreach (var image in Model.Images)
+                            {
+                                <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                    <div class="image-item" data-image-id="@image.Id">
+                                        <div class="image-container">
+                                            <img src="@image.ThumbnailUri" alt="Image" class="img-fluid rounded">
+                                            <div class="image-overlay">
+                                                <div class="form-check">
+                                                    <input class="form-check-input image-checkbox" type="checkbox"
+                                                           value="@image.Id" id="check_@image.Id">
+                                                    <label class="form-check-label" for="check_@image.Id">
+                                                        選択
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="col-12">
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-images fa-3x mb-3"></i>
+                                    <p>まだ画像がアップロードされていません</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- アラート表示エリア -->
+<div id="alertArea"></div>
+
+<style>
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 60px 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+    .image-item {
+        position: relative;
+        transition: transform 0.3s ease;
+    }
+
+        .image-item:hover {
+            transform: scale(1.05);
+        }
+
+    .image-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+        .image-container img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+    .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .image-container:hover .image-overlay {
+        opacity: 1;
+    }
+
+    .image-item.selected .image-overlay {
+        opacity: 1;
+        background: rgba(0,123,255,0.8);
+    }
+
+    .image-checkbox {
+        transform: scale(1.5);
+    }
+
+    .form-check-label {
+        color: white;
+        font-weight: bold;
+        margin-left: 8px;
+    }
+
+    .training-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // jQueryが確実に読み込まれるまで待機
+    function initializeDetailPage() {
+        if (typeof $ === 'undefined') {
+            setTimeout(initializeDetailPage, 100);
+            return;
+        }
+
+        console.log('jQuery loaded, initializing page'); // デバッグ用
+
+        const uploadArea = $('#uploadArea');
+        const fileInput = $('#imageFiles');
+        const deleteBtn = $('#deleteSelectedBtn');
+        const selectAllBtn = $('#selectAllBtn');
+        const clearSelectionBtn = $('#clearSelectionBtn');
+        const alertArea = $('#alertArea');
+
+        console.log('Elements found:', {
+            uploadArea: uploadArea.length,
+            deleteBtn: deleteBtn.length,
+            selectAllBtn: selectAllBtn.length,
+            clearSelectionBtn: clearSelectionBtn.length
+        });
+
+        // ドラッグ&ドロップ機能
+        uploadArea.on('dragover', function (e) {
+            e.preventDefault();
+            $(this).addClass('dragover');
+        });
+
+        uploadArea.on('dragleave', function (e) {
+            e.preventDefault();
+            $(this).removeClass('dragover');
+        });
+
+        uploadArea.on('drop', function (e) {
+            e.preventDefault();
+            $(this).removeClass('dragover');
+
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files);
+            }
+        });
+
+        // クリックでファイル選択
+        uploadArea.on('click', function () {
+            fileInput.click();
+        });
+
+        // ファイル選択時の処理
+        fileInput.on('change', function () {
+            const files = this.files;
+            if (files.length > 0) {
+                handleFileUpload(files);
+            }
+        });
+
+        // 画像選択の処理
+        $(document).on('change', '.image-checkbox', function () {
+            console.log('Checkbox changed'); // デバッグ用
+            const isChecked = $(this).is(':checked');
+            const imageItem = $(this).closest('.image-item');
+
+            if (isChecked) {
+                imageItem.addClass('selected');
+            } else {
+                imageItem.removeClass('selected');
+            }
+
+            updateDeleteButtonState();
+        });
+
+        // 全選択
+        selectAllBtn.on('click', function (e) {
+            e.preventDefault();
+            console.log('Select all clicked'); // デバッグ用
+            $('.image-checkbox').each(function () {
+                $(this).prop('checked', true);
+                $(this).closest('.image-item').addClass('selected');
+            });
+            updateDeleteButtonState();
+        });
+
+        // 選択解除
+        clearSelectionBtn.on('click', function (e) {
+            e.preventDefault();
+            console.log('Clear selection clicked'); // デバッグ用
+            $('.image-checkbox').each(function () {
+                $(this).prop('checked', false);
+                $(this).closest('.image-item').removeClass('selected');
+            });
+            updateDeleteButtonState();
+        });
+
+        // 削除ボタン
+        deleteBtn.on('click', function (e) {
+            e.preventDefault();
+            console.log('Delete button clicked'); // デバッグ用
+            const selectedIds = getSelectedImageIds();
+            console.log('Selected IDs:', selectedIds); // デバッグ用
+
+            if (selectedIds.length === 0) {
+                showAlert('削除する画像を選択してください', 'warning');
+                return;
+            }
+
+            if (confirm(`選択した${selectedIds.length}枚の画像を削除しますか？`)) {
+                deleteImages(selectedIds);
+            }
+        });
+
+        function handleFileUpload(files) {
+            const formData = new FormData();
+            const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+            if (validFiles.length === 0) {
+                showAlert('有効な画像ファイルを選択してください', 'warning');
+                return;
+            }
+
+            validFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            formData.append('tagName', '@Model.TagName');
+
+            // ローディング表示
+            uploadArea.find('.upload-content').html('<i class="fas fa-spinner fa-spin fa-3x text-primary"></i><p class="text-muted mt-3">アップロード中...</p>');
+
+            $.ajax({
+                url: '@Url.Action("UploadImages")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(response.error, 'danger');
+                    }
+                },
+                error: function () {
+                    showAlert('アップロードエラーが発生しました', 'danger');
+                },
+                complete: function () {
+                    resetUploadArea();
+                }
+            });
+        }
+
+        function deleteImages(imageIds) {
+            console.log('Deleting images:', imageIds); // デバッグ用
+            $.ajax({
+                url: '@Url.Action("DeleteImages")',
+                type: 'POST',
+                data: { imageIds: imageIds },
+                traditional: true, // 配列の送信方法を指定
+                success: function (response) {
+                    console.log('Delete response:', response); // デバッグ用
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        // 削除された画像を画面から除去
+                        imageIds.forEach(id => {
+                            $(`.image-item[data-image-id="${id}"]`).fadeOut(300, function () {
+                                $(this).remove();
+                                updateDeleteButtonState();
+                            });
+                        });
+                    } else {
+                        showAlert(response.error || '削除に失敗しました', 'danger');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Delete error:', error); // デバッグ用
+                    showAlert('削除エラーが発生しました', 'danger');
+                }
+            });
+        }
+
+        function resetUploadArea() {
+            uploadArea.find('.upload-content').html(`
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">複数の画像をドラッグ&ドロップまたはクリックして選択</p>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('imageFiles').click()">
+                        画像を選択
+                    </button>
+                `);
+        }
+
+        function getSelectedImageIds() {
+            const ids = [];
+            $('.image-checkbox:checked').each(function () {
+                ids.push($(this).val());
+            });
+            console.log('Getting selected IDs:', ids); // デバッグ用
+            return ids;
+        }
+
+        function updateDeleteButtonState() {
+            const selectedCount = $('.image-checkbox:checked').length;
+            console.log('Selected count:', selectedCount); // デバッグ用
+
+            deleteBtn.prop('disabled', selectedCount === 0);
+
+            if (selectedCount > 0) {
+                deleteBtn.html(`<i class="fas fa-trash"></i> 選択した画像を削除 (${selectedCount}枚)`);
+            } else {
+                deleteBtn.html('<i class="fas fa-trash"></i> 選択した画像を削除');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertId = 'alert_' + Date.now();
+            const alertHtml = `
+                    <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" style="position: fixed; top: 20px; right: 20px; z-index: 1000; min-width: 300px;">
+                        ${message}
+                        <button type="button" class="btn-close" onclick="document.getElementById('${alertId}').remove()" aria-label="Close"></button>
+                    </div>
+                `;
+
+            alertArea.append(alertHtml);
+
+            // 5秒後に自動で消去
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    $(alertElement).fadeOut(300, function () {
+                        $(this).remove();
+                    });
+                }
+            }, 5000);
+        }
+
+        // 初期状態でのボタン状態更新
+        updateDeleteButtonState();
+
+        // ページ読み込み後にチェックボックスの状態を確認
+        setTimeout(function () {
+            console.log('Checkboxes found:', $('.image-checkbox').length);
+        }, 1000);
+    }
+
+    // ページ読み込み完了後に初期化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDetailPage);
+    } else {
+        initializeDetailPage();
+    }
+</script>

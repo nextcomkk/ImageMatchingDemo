@@ -1,0 +1,444 @@
+﻿@model QuestPhotoDemo.Models.HomeViewModel
+@{
+    ViewData["Title"] = "QuestPhotoDemo 画像照合デモアプリ";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center mb-4">QuestPhotoDemo 画像照合デモアプリ</h1>
+
+            <!-- タグ選択エリア -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>タグ管理</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <a href="@Url.Action("Detail", new { tagName = tag })"
+                                   class="btn btn-outline-primary btn-lg btn-block tag-button">
+                                    <i class="fas fa-tag"></i> @tag
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- モデル管理エリア -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>モデル管理</h3>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-3">新しい画像を追加した後は、モデルを再学習してください</p>
+                    <button type="button" class="btn btn-success btn-lg" id="trainModelBtn">
+                        <i class="fas fa-play"></i> モデル全体を再学習
+                    </button>
+                    <div id="trainingStatus" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin"></i> <span id="statusMessage">トレーニング中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画像照合エリア -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>画像を照合する</h3>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">照合したい画像をドラッグ&ドロップまたはクリックして選択</p>
+                            <input type="file" id="imageFile" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-primary" id="selectImageBtn">
+                                画像を選択
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 選択した画像のプレビューエリア -->
+                    <div id="imagePreview" class="text-center mt-4" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>選択した画像</h5>
+                            </div>
+                            <div class="card-body">
+                                <img id="previewImage" src="" alt="選択した画像" class="img-fluid" style="max-height: 300px; border-radius: 8px;">
+                                <div class="mt-2">
+                                    <small class="text-muted" id="imageInfo"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 照合結果表示エリア -->
+                    <div id="predictionResult" class="text-center mt-4" style="display: none;">
+                        <div class="alert alert-info">
+                            <h4>照合結果</h4>
+                            <div class="prediction-display">
+                                <div id="tagName" class="h2 text-primary"></div>
+                                <div id="probability" class="h1 text-success"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- エラー表示エリア -->
+                    <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- アラート表示エリア -->
+<div id="alertArea"></div>
+
+<style>
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 60px 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+    .tag-button {
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+    }
+
+        .tag-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+    .prediction-display {
+        margin: 20px 0;
+    }
+
+    #probability {
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    .fas {
+        margin-right: 8px;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // jQueryが確実に読み込まれるまで待機
+    function initializeIndexPage() {
+        if (typeof $ === 'undefined') {
+            setTimeout(initializeIndexPage, 100);
+            return;
+        }
+
+        console.log('jQuery loaded, initializing page');
+
+        const uploadArea = $('#uploadArea');
+        const fileInput = $('#imageFile');
+        const predictionResult = $('#predictionResult');
+        const errorMessage = $('#errorMessage');
+        const trainBtn = $('#trainModelBtn');
+        const trainingStatus = $('#trainingStatus');
+        const statusMessage = $('#statusMessage');
+        const alertArea = $('#alertArea');
+
+        let isProcessing = false; // 処理中フラグ
+
+        // 初期ボタンイベント
+        bindSelectButton();
+
+        function bindSelectButton() {
+            // 既存のイベントハンドラーを削除
+            $(document).off('click', '#selectImageBtn');
+
+            // 新しいイベントハンドラーを設定
+            $(document).on('click', '#selectImageBtn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Select button clicked!');
+
+                if (isProcessing) {
+                    console.log('Processing in progress, ignoring click');
+                    return;
+                }
+
+                console.log('Triggering file input click');
+                $('#imageFile')[0].click(); // 直接DOMのclickを呼び出し
+            });
+        }
+
+        // ドラッグ&ドロップ機能
+        uploadArea.on('dragover', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).addClass('dragover');
+        });
+
+        uploadArea.on('dragleave', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('dragover');
+        });
+
+        uploadArea.on('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('dragover');
+
+            if (isProcessing) return;
+
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                console.log('File dropped:', files[0].name);
+                showImagePreview(files[0]);
+                handleFileUpload(files[0]);
+            }
+        });
+
+        // アップロードエリアクリック（ボタン以外の部分）
+        uploadArea.on('click', function (e) {
+            if (isProcessing) return;
+            // ボタンクリック時は除外
+            if ($(e.target).closest('#selectImageBtn').length > 0) return;
+
+            console.log('Upload area clicked');
+            $('#imageFile')[0].click();
+        });
+
+        // ファイル選択時の処理（委譲イベント）
+        $(document).on('change', '#imageFile', function (e) {
+            console.log('File input changed');
+            const file = this.files[0];
+            if (file && !isProcessing) {
+                console.log('File selected:', file.name);
+                showImagePreview(file);
+                handleFileUpload(file);
+            }
+            // ファイル入力をクリア（次回選択のため）
+            setTimeout(() => {
+                $(this).val('');
+            }, 100);
+        });
+
+        // 再学習ボタン
+        trainBtn.on('click', function (e) {
+            e.preventDefault();
+            if (confirm('モデル全体の再学習を開始しますか？\nすべてのタグの画像を使用してトレーニングします。')) {
+                startTraining();
+            }
+        });
+
+        function handleFileUpload(file) {
+            if (isProcessing) return;
+
+            console.log('handleFileUpload called with:', file.name);
+
+            if (!file.type.startsWith('image/')) {
+                console.log('Invalid file type:', file.type);
+                showError('画像ファイルを選択してください');
+                return;
+            }
+
+            isProcessing = true;
+            const formData = new FormData();
+            formData.append('uploadedFile', file);
+
+            // ローディング表示
+            $('#imagePreview').hide();
+            predictionResult.hide();
+            errorMessage.hide();
+            console.log('Starting upload, showing loader');
+            uploadArea.find('.upload-content').html('<i class="fas fa-spinner fa-spin fa-3x text-primary"></i><p class="text-muted mt-3">照合中...</p>');
+
+            console.log('Making AJAX request');
+            $.ajax({
+                url: '@Url.Action("PredictImage")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    console.log('AJAX success:', response);
+                    if (response.error) {
+                        showError(response.error);
+                    } else {
+                        showPrediction(response.tagName, response.probability);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.log('AJAX error:', error);
+                    showError('サーバーエラーが発生しました');
+                },
+                complete: function () {
+                    console.log('AJAX complete, resetting upload area');
+                    isProcessing = false;
+                    resetUploadArea();
+                }
+            });
+        }
+
+        function startTraining() {
+            trainBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> トレーニング開始中...');
+            trainingStatus.show();
+            statusMessage.text('トレーニングを開始しています...');
+
+            $.ajax({
+                url: '@Url.Action("TrainModel")',
+                type: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        showAlert('トレーニングが開始されました', 'success');
+                        monitorTrainingStatus(response.iterationId);
+                    } else {
+                        showAlert(response.error || 'トレーニングの開始に失敗しました', 'danger');
+                        resetTrainButton();
+                    }
+                },
+                error: function () {
+                    showAlert('トレーニング開始エラーが発生しました', 'danger');
+                    resetTrainButton();
+                }
+            });
+        }
+
+        function monitorTrainingStatus(iterationId) {
+            const checkStatus = () => {
+                $.ajax({
+                    url: '@Url.Action("GetTrainingStatus")',
+                    type: 'GET',
+                    data: { iterationId: iterationId },
+                    success: function (response) {
+                        if (response.error) {
+                            showAlert(response.error, 'danger');
+                            resetTrainButton();
+                            return;
+                        }
+
+                        const status = response.status;
+                        statusMessage.text(response.message);
+
+                        if (status === 'Completed') {
+                            showAlert('トレーニングが完了しました！新しいモデルで画像照合をお試しください。', 'success');
+                            resetTrainButton();
+                        } else if (status === 'Failed') {
+                            showAlert('トレーニングが失敗しました', 'danger');
+                            resetTrainButton();
+                        } else {
+                            // まだトレーニング中の場合、3秒後に再チェック
+                            setTimeout(checkStatus, 3000);
+                        }
+                    },
+                    error: function () {
+                        showAlert('トレーニング状況の取得に失敗しました', 'warning');
+                        resetTrainButton();
+                    }
+                });
+            };
+
+            checkStatus();
+        }
+
+        function resetTrainButton() {
+            trainBtn.prop('disabled', false).html('<i class="fas fa-play"></i> モデル全体を再学習');
+            trainingStatus.hide();
+        }
+
+        function resetUploadArea() {
+            console.log('Resetting upload area');
+            const newContent = `
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">照合したい画像をドラッグ&ドロップまたはクリックして選択</p>
+                    <input type="file" id="imageFile" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-primary" id="selectImageBtn">
+                        画像を選択
+                    </button>
+                `;
+            uploadArea.find('.upload-content').html(newContent);
+
+            // ボタンイベントを再バインド
+            bindSelectButton();
+
+            console.log('Upload area reset complete');
+        }
+
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                $('#previewImage').attr('src', e.target.result);
+                $('#imageInfo').text(`ファイル名: ${file.name} | サイズ: ${(file.size / 1024).toFixed(1)} KB`);
+                $('#imagePreview').show();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showPrediction(tagName, probability) {
+            $('#tagName').text(tagName);
+            $('#probability').text(probability + '%');
+            predictionResult.show();
+            errorMessage.hide();
+        }
+
+        function showError(message) {
+            errorMessage.text(message).show();
+            predictionResult.hide();
+            $('#imagePreview').show(); // エラー時も画像プレビューは表示
+        }
+
+        function showAlert(message, type) {
+            const alertId = 'alert_' + Date.now();
+            const alertHtml = `
+                    <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" style="position: fixed; top: 20px; right: 20px; z-index: 1000; min-width: 300px;">
+                        ${message}
+                        <button type="button" class="btn-close" onclick="document.getElementById('${alertId}').remove()" aria-label="Close"></button>
+                    </div>
+                `;
+
+            alertArea.append(alertHtml);
+
+            // 5秒後に自動で消去
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    $(alertElement).fadeOut(300, function () {
+                        $(this).remove();
+                    });
+                }
+            }, 5000);
+        }
+    }
+
+    // ページ読み込み完了後に初期化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeIndexPage);
+    } else {
+        initializeIndexPage();
+    }
+</script>

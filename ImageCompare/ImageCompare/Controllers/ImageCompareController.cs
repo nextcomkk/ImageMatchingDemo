@@ -166,16 +166,26 @@ namespace ImageCompare.Controllers
                 // Create Custom Vision project if it doesn't exist
                 if (string.IsNullOrEmpty(question.CustomVisionProjectId))
                 {
-                    var project = await _customVisionService.CreateProjectAsync(question.Name);
-                    question.CustomVisionProjectId = project.Id.ToString();
-
-                    // Upload all existing images to Custom Vision
-                    foreach (var tag in tags)
+                    var existingProjects = await _customVisionService.GetProjectsAsync();
+                    if (existingProjects.Any(p => p.Name == question.Name))
                     {
-                        if (tag.TrainingImages.Any())
+                        _logger.LogWarning("プロジェクト名 '{0}' は既に存在しています。", question.Name);
+                        // 既存のものを使うか、新しい名前を作ってリトライ
+                    }
+                    else
+                    {
+                        //var project = await _customVisionService.CreateProjectAsync(question.Name, question.Description, null, "Multiclass");
+                        var project = await _customVisionService.CreateProjectAsync(question.Name);
+                        question.CustomVisionProjectId = project.Id.ToString();
+
+                        // Upload all existing images to Custom Vision
+                        foreach (var tag in tags)
                         {
-                            var imagePaths = tag.TrainingImages.Select(ti => ti.FilePath).ToList();
-                            await _customVisionService.UploadTrainingImagesAsync(project.Id, tag.TagName, imagePaths);
+                            if (tag.TrainingImages.Any())
+                            {
+                                var imagePaths = tag.TrainingImages.Select(ti => ti.FilePath).ToList();
+                                await _customVisionService.UploadTrainingImagesAsync(project.Id, tag.TagName, imagePaths);
+                            }
                         }
                     }
                 }

@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35728.132 d17.12
+VisualStudioVersion = 17.12.35728.132
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageCompare", "ImageCompare\ImageCompare.csproj", "{CEA3193B-DB59-4488-B5D9-CE02167D8A34}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageCompare", "ImageCompare\ImageCompare.csproj", "{CEA3193B-DB59-4488-B5D9-CE02167D8A34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuestPhotoDemo", "QuestPhotoDemo\QuestPhotoDemo.csproj", "{3A46B68A-C034-4518-B96C-5F1A82B31347}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +17,15 @@ Global
 		{CEA3193B-DB59-4488-B5D9-CE02167D8A34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CEA3193B-DB59-4488-B5D9-CE02167D8A34}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CEA3193B-DB59-4488-B5D9-CE02167D8A34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A46B68A-C034-4518-B96C-5F1A82B31347}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A46B68A-C034-4518-B96C-5F1A82B31347}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A46B68A-C034-4518-B96C-5F1A82B31347}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A46B68A-C034-4518-B96C-5F1A82B31347}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {59D27C5C-1EEF-4204-BAAB-9FB174C7F4EF}
 	EndGlobalSection
 EndGlobal
