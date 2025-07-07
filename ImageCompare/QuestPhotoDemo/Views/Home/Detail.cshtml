@@ -39,29 +39,8 @@
                 </div>
             </div>
 
-            <!-- 操作ボタンエリア -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <button type="button" class="btn btn-danger w-100" id="deleteSelectedBtn" disabled>
-                                <i class="fas fa-trash"></i> 選択した画像を削除
-                            </button>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-12 text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i>
-                                新しい画像を追加した後は、<a href="@Url.Action("Index")" class="text-primary">トップページ</a>でモデルを再学習してください
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 画像一覧エリア -->
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>アップロード済み画像 (@Model.Images.Count 枚)</h3>
                     <div>
@@ -106,6 +85,27 @@
                                 </div>
                             </div>
                         }
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作ボタンエリア（画像一覧の下に移動） -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-danger w-100" id="deleteSelectedBtn" disabled>
+                                <i class="fas fa-trash"></i> 選択した画像を削除
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                新しい画像を追加した後は、<a href="@Url.Action("Index")" class="text-primary">トップページ</a>でモデルを再学習してください
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>

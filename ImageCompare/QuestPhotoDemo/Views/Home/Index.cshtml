@@ -8,46 +8,8 @@
         <div class="col-md-12">
             <h1 class="text-center mb-4">QuestPhotoDemo 画像照合デモアプリ</h1>
 
-            <!-- タグ選択エリア -->
+            <!-- 画像照合エリア（よく使うので最上位） -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h3>タグ管理</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach (var tag in Model.Tags)
-                        {
-                            <div class="col-md-6 mb-3">
-                                <a href="@Url.Action("Detail", new { tagName = tag })"
-                                   class="btn btn-outline-primary btn-lg btn-block tag-button">
-                                    <i class="fas fa-tag"></i> @tag
-                                </a>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <!-- モデル管理エリア -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>モデル管理</h3>
-                </div>
-                <div class="card-body text-center">
-                    <p class="text-muted mb-3">新しい画像を追加した後は、モデルを再学習してください</p>
-                    <button type="button" class="btn btn-success btn-lg" id="trainModelBtn">
-                        <i class="fas fa-play"></i> モデル全体を再学習
-                    </button>
-                    <div id="trainingStatus" class="mt-3" style="display: none;">
-                        <div class="alert alert-info">
-                            <i class="fas fa-spinner fa-spin"></i> <span id="statusMessage">トレーニング中...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 画像照合エリア -->
-            <div class="card">
                 <div class="card-header">
                     <h3>画像を照合する</h3>
                 </div>
@@ -91,6 +53,44 @@
 
                     <!-- エラー表示エリア -->
                     <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- タグ選択エリア -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>タグ管理</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <a href="@Url.Action("Detail", new { tagName = tag })"
+                                   class="btn btn-outline-primary btn-lg btn-block tag-button">
+                                    <i class="fas fa-tag"></i> @tag
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- モデル管理エリア -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>モデル管理</h3>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-3">新しい画像を追加した後は、モデルを再学習してください</p>
+                    <button type="button" class="btn btn-success btn-lg" id="trainModelBtn">
+                        <i class="fas fa-play"></i> モデル全体を再学習
+                    </button>
+                    <div id="trainingStatus" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin"></i> <span id="statusMessage">トレーニング中...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

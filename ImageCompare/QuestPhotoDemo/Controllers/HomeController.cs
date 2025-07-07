@@ -304,6 +304,39 @@ namespace QuestPhotoDemo.Controllers
             try
             {
                 var iteration = await _trainingClient.GetIterationAsync(Guid.Parse(_projectId), iterationId);
+
+                // トレーニングが完了した場合、自動公開を実行
+                if (iteration.Status == "Completed" && string.IsNullOrEmpty(iteration.PublishName))
+                {
+                    try
+                    {
+                        // 固定名で公開（既存のモデルを上書き）
+                        var publishName = _publishedModelName; // appsettings.jsonの値を使用
+
+                        // モデルを公開
+                        await _trainingClient.PublishIterationAsync(
+                            Guid.Parse(_projectId),
+                            iterationId,
+                            publishName,
+                            _configuration["CustomVision:PredictionResourceId"]);
+
+                        return Json(new
+                        {
+                            status = "Published",
+                            message = $"トレーニング完了！新しいモデルが '{publishName}' として公開されました。すぐに照合で使用できます。",
+                            publishedModelName = publishName
+                        });
+                    }
+                    catch (Exception publishEx)
+                    {
+                        return Json(new
+                        {
+                            status = "Completed",
+                            message = $"トレーニング完了（手動公開が必要）: {publishEx.Message}"
+                        });
+                    }
+                }
+
                 return Json(new
                 {
                     status = iteration.Status,
